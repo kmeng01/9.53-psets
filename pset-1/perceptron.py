@@ -28,6 +28,10 @@ class Perceptron:
             return self.w @ x
 
     def predict_test(self, x):
+        """
+        Different from training because we need to threshold the
+        continuous output for ADALINE.
+        """
         y_hat = np.sign(self.w @ x)
         y_hat[y_hat == 0] = 1
         return y_hat
@@ -38,7 +42,19 @@ class Perceptron:
     def get_loss(self, x, y):
         return np.mean((self.predict_train(x) - y) ** 2)
 
-    def train(self, x, y, pca, epochs=10, lr=0.1, plot_interval=1, plot_progress=True):
+    def train(
+        self,
+        x,
+        y,
+        pca,
+        batch_size=1,
+        epochs=10,
+        lr=0.1,
+        min_correct=False,
+        plot_interval=1,
+        plot_progress=True,
+        acc_lim=1,
+    ):
         """
         y should be a vector of {-1, 1}
         """
@@ -46,27 +62,35 @@ class Perceptron:
         self.init_w()
 
         plot_acc, plot_loss = [], []
-        tot_epochs = 0
+        tot_epochs = epochs
 
         for e in range(epochs):
             # Train
+            updates, updates_cnt = np.zeros(self.w.shape), 0
             for i in range(x.shape[1]):
                 x_i, y_i = x[:, i : i + 1], y[:, i : i + 1]
                 y_hat_i = self.predict_train(x_i)
-                # print(x_i, y_i, y_hat_i)
                 if y_hat_i != y_i:
                     if not self.is_adaline:
-                        self.w += lr * (-y_hat_i * x_i.T)
+                        if not min_correct:
+                            cur_lr = lr
+                        else:
+                            cur_lr = ((self.w @ x_i) / (x_i.T @ x_i)).squeeze()
+                        updates += np.abs(cur_lr) * (y_i * x_i.T)
                     else:
-                        self.w += lr * (-y_hat_i + y_i) * x_i.T
+                        updates += lr * (-y_hat_i + y_i) * x_i.T
+                    updates_cnt += 1
+
+                if updates_cnt == batch_size or i == x.shape[1] - 1:
+                    self.w += updates
+                    updates, updates_cnt = np.zeros(self.w.shape), 0
 
                 if i % plot_interval == 0:
                     plot_acc.append(self.get_accuracy(x, y))
                     plot_loss.append(self.get_loss(x, y))
 
-            tot_epochs += 1
-            if self.get_accuracy(x, y) == 1:
-                break
+            if self.get_accuracy(x, y) >= acc_lim - 1e-5 and tot_epochs == epochs:
+                tot_epochs = e
 
         if plot_progress:
             plt.plot(plot_acc)
@@ -84,6 +108,11 @@ class Perceptron:
         return tot_epochs
 
     def get_parallel_w(self, pca):
+        """
+        Returns a vector parallel to the decision boundary
+        in PCA space. For visualization purposes.
+        """
+
         theta = 90
         r = np.array(((np.cos(theta), -np.sin(theta)), (np.sin(theta), np.cos(theta))))
 
