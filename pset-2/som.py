@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 import matplotlib.collections as mc
 import numpy as np
-from tqdm.auto import tqdm
 
 
 class SOM:
     def __init__(self, N, M):
+        self.N, self.M = N, M
+
         self.G = np.zeros((N, M, 2))
         self.neigh = {}
-        self.N, self.M = N, M
 
     def init_G(self, prior_func):
         """
