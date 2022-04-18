@@ -27,6 +27,10 @@ class Network:
         return out
 
     def backward(self):
+        """
+        Backpropagation algorithm: computes gradients for each layer.
+        """
+
         grad = self.loss.backward()
         for layer in reversed(self.layers):
             grad = layer.backward(grad)
@@ -49,12 +53,21 @@ class Dense:
         return self.inp @ self.w + self.b
 
     def backward(self, prev_grad):
+        """
+        Stores dL/dw and dL/db for the current layer (used to update weights).
+        Returns dL/dx for the previous layer's chain rule computation.
+        """
+
         self.w_grad = self.inp.T @ prev_grad
         self.b_grad = prev_grad.sum(axis=0)
 
         return prev_grad @ self.w.T
 
     def update(self, lr):
+        """
+        Updates weights and biases using the computed gradients.
+        """
+
         self.w -= lr * self.w_grad
         self.b -= lr * self.b_grad
 
@@ -68,6 +81,10 @@ class Sigmoid:
         return 1 / (1 + np.exp(-self.inp))
 
     def backward(self, prev_grad):
+        """
+        Returns dL/dx for the previous layer's chain rule computation.
+        """
+
         out = self.forward(self.inp)
         cur_grad = out * (1 - out)
         return cur_grad * prev_grad
@@ -87,5 +104,9 @@ class MSELoss:
         return self.out
 
     def backward(self):
+        """
+        Returns dL/dx.
+        """
+
         self.grad = 2 * (self.y_pred - self.y_true)
         return self.grad
