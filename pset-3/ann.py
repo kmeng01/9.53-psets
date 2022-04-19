@@ -6,19 +6,28 @@ class Network:
         self.layers = layers
         self.loss = MSELoss()
 
-    def fit(self, x, y, epochs=5000, lr=2e-3):
-        for epoch in range(epochs):
+    def fit(self, train_x, train_y, iters, lr):
+        """
+        Runs stochastic gradient descent, where each iteration
+        samples a random point from the training dataset.
+        """
+
+        for it in range(iters):
+            idx = np.random.randint(train_x.shape[0])
+            x, y = train_x[idx:idx + 1, :], train_y[idx: idx + 1, :]
+
             y_pred = self.forward(x)
             loss = self.loss.forward(y_pred, y).sum()
-
-            if epoch % (epochs // 20) == 0:
-                acc = (y_pred.argmax(axis=1) == y.argmax(axis=1)).mean()
-                print(f"Epoch {epoch}: loss = {loss} | acc = {acc}")
-
             self.backward()
 
             for layer in self.layers:
                 layer.update(lr)
+
+            if it % (iters // 20) == 0:
+                y_pred = self.forward(train_x)
+                loss = self.loss.forward(y_pred, train_y).sum()
+                acc = (y_pred.argmax(axis=1) == train_y.argmax(axis=1)).mean()
+                print(f"Epoch {it}: loss = {loss} | acc = {acc}")
 
     def forward(self, x):
         out = x
